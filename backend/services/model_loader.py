@@ -3,11 +3,11 @@ import pickle
 
 def load_models():
     """
-    Loads all models from backend/models directory.
+    Loads all models from backend/ML_Model/models directory.
     """
 
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    models_path = os.path.join(base_dir, "models")
+    models_path = os.path.join(base_dir, "ML_Model", "models")
 
     models_dict = {}
 
@@ -15,11 +15,13 @@ def load_models():
         raise FileNotFoundError(f"Models folder not found at: {models_path}")
 
     for filename in os.listdir(models_path):
+
         if filename.endswith("_model.pkl"):
 
             ticker = filename.replace("_model.pkl", "")
 
             try:
+
                 with open(os.path.join(models_path, f"{ticker}_model.pkl"), "rb") as f:
                     model = pickle.load(f)
 
