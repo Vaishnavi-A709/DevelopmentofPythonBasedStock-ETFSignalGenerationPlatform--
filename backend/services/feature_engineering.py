@@ -1,43 +1,32 @@
-import numpy as np
 import pandas as pd
 
-
 def create_features(data):
-    """
-    Create technical indicators exactly as used during training.
-    Returns processed DataFrame.
-    """
 
     df = data.copy()
 
-    # 1. Daily Return
-    df['Return'] = df['Close'].pct_change()
+    # Return
+    df["Return"] = df["Close"].pct_change()
 
-    # 2. Moving Averages
-    df['MA20'] = df['Close'].rolling(20).mean()
-    df['MA50'] = df['Close'].rolling(50).mean()
+    # Moving averages
+    df["SMA_5"] = df["Close"].rolling(5).mean()
+    df["SMA_20"] = df["Close"].rolling(20).mean()
 
-    # 3. Volatility (20-day rolling std of returns)
-    df['Volatility'] = df['Return'].rolling(20).std()
+    # EMA
+    df["EMA_10"] = df["Close"].ewm(span=10, adjust=False).mean()
 
-    # 4. Volume Change
-    df['Volume_Change'] = df['Volume'].pct_change()
+    # Volatility
+    df["Volatility"] = df["Return"].rolling(20).std()
 
-    # 5. RSI (14-day)
-    delta = df['Close'].diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
+    # Momentum
+    df["Momentum"] = df["Close"] - df["Close"].shift(10)
 
-    avg_gain = gain.rolling(14).mean()
-    avg_loss = loss.rolling(14).mean()
+    # Lag features
+    df["Lag_1"] = df["Close"].shift(1)
+    df["Lag_2"] = df["Close"].shift(2)
+    df["Lag_3"] = df["Close"].shift(3)
+    df["Lag_4"] = df["Close"].shift(4)
+    df["Lag_5"] = df["Close"].shift(5)
 
-    rs = avg_gain / avg_loss
-    df['RSI'] = 100 - (100 / (1 + rs))
-
-    # 6. Moving Average Crossover
-    df['MA_Cross'] = (df['MA20'] > df['MA50']).astype(int)
-
-    # Drop NaN values
     df = df.dropna()
 
     return df

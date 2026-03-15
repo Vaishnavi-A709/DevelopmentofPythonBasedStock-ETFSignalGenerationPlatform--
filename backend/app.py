@@ -1,9 +1,11 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 from services.model_loader import load_models
 from services.predictor import predict_signal
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)
 
 # ---------------------------------
 # Load Models at Startup
