@@ -3,8 +3,7 @@ scikit-learn
 pandas
 numpy
 yfinance
-flask
-scikit-learn
-pandas
-numpy
-yfinance
+xgboost
+lxml
+html5lib
+flask-cors

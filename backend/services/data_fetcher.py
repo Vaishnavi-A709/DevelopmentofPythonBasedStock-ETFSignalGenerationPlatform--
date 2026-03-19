@@ -2,25 +2,42 @@ import yfinance as yf
 import pandas as pd
 
 def fetch_stock_data(ticker, period="6mo"):
+    """
+    Fetch historical stock data from Yahoo Finance.
+    Returns pandas DataFrame.
+    """
 
     try:
-        ticker_symbol = ticker + ".NS"
-
-        data = yf.download(ticker_symbol, period=period, progress=False)
+        ticker_obj = yf.Ticker(ticker)
+        data = ticker_obj.history(period=period)
 
         if data.empty:
-            raise ValueError(f"No data found for {ticker_symbol}")
+            # Fallback to the BSE (Bombay Stock Exchange) if NSE (.NS) fails due to Yahoo Finance glitches
+            if ticker.endswith('.NS'):
+                fallback_ticker = ticker.replace('.NS', '.BO')
+                data = yf.Ticker(fallback_ticker).history(period=period)
+                
+            if data.empty:
+                # Fallback 2: Certain stocks like ZOMATO randomly fail on history() but work on download()
+                dl_data = yf.download(ticker, period=period, progress=False)
+                if not dl_data.empty:
+                    if isinstance(dl_data.columns, pd.MultiIndex):
+                        dl_data.columns = dl_data.columns.get_level_values(0)
+                    if hasattr(dl_data.columns, 'name'):
+                        dl_data.columns.name = None
+                    data = dl_data
+                else:
+                    raise ValueError(f"No data found for {ticker} or its fallbacks on Yahoo.")
 
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = data.columns.get_level_values(0)
 
-        data.columns.name = None
+        # Remove column index name if it exists
+        if hasattr(data.columns, 'name'):
+            data.columns.name = None
 
         required_columns = ["Open", "High", "Low", "Close", "Volume"]
-
         for col in required_columns:
             if col not in data.columns:
-                raise ValueError(f"Missing required column: {col}")
+                raise ValueError(f"Missing required column: {col}. Found columns: {list(data.columns)}")
 
         return data
 

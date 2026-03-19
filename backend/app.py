@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from services.model_loader import load_models
 from services.predictor import predict_signal
+from services.stock_universe import get_all_tickers
 from datetime import datetime
 
 app = Flask(__name__)
@@ -36,7 +37,7 @@ def home():
 @app.route("/stocks", methods=["GET"])
 def get_stocks():
     return jsonify({
-        "available_stocks": list(models_dict.keys())
+        "available_stocks": get_all_tickers()
     })
 
 

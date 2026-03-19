@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Brain, TrendingUp, TrendingDown, Minus, Loader2, Info } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Line } from "recharts";
@@ -98,38 +98,6 @@ const modelConfigs: Record<string, {
   },
 };
 
-// Generate deterministic but varied results based on inputs
-function generateSignalResult(model: string, symbol: string, timeframe: string) {
-  const config = modelConfigs[model];
-  
-  // Create a simple hash from inputs for deterministic variation
-  const hash = (symbol.charCodeAt(0) + symbol.length + timeframes.indexOf(timeframe)) % 100;
-  
-  // Determine signal based on model bias and hash
-  let signal: "BUY" | "SELL" | "HOLD";
-  const signalThreshold = hash;
-  
-  if (config.signalBias === "bullish") {
-    signal = signalThreshold < 60 ? "BUY" : signalThreshold < 80 ? "HOLD" : "SELL";
-  } else if (config.signalBias === "bearish") {
-    signal = signalThreshold < 35 ? "BUY" : signalThreshold < 65 ? "SELL" : "HOLD";
-  } else {
-    signal = signalThreshold < 33 ? "BUY" : signalThreshold < 66 ? "HOLD" : "SELL";
-  }
-  
-  // Calculate confidence with variation
-  const confidenceVariation = (hash % 15) - 7; // -7 to +7
-  const timeframeBonus = timeframe === "1M" ? 3 : timeframe === "3M" ? 5 : timeframe === "1Y" ? 2 : 0;
-  const confidence = Math.min(98, Math.max(55, config.baseConfidence + confidenceVariation + timeframeBonus));
-  
-  // Vary feature importance slightly
-  const features = config.features.map((f, i) => ({
-    ...f,
-    importance: Math.max(0.02, f.importance + ((hash + i) % 10 - 5) / 100),
-  }));
-  
-  return { signal, confidence, features, description: config.description, metrics: config.metrics };
-}
 
 export default function SignalEngine() {
   const [model, setModel] = useState("Random Forest");
@@ -139,19 +107,40 @@ export default function SignalEngine() {
   const [loading, setLoading] = useState(false);
   const [resultKey, setResultKey] = useState(0); // To trigger re-animation
 
-  const result = useMemo(() => {
-    if (!generated) return null;
-    return generateSignalResult(model, symbol, timeframe);
-  }, [generated, model, symbol, timeframe, resultKey]);
+  const [apiResult, setApiResult] = useState<any>(null);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setLoading(true);
     setGenerated(false);
-    setTimeout(() => {
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/predict/${symbol}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch prediction");
+      }
+      const data = await response.json();
+      
+      if (data.status === "error") {
+        throw new Error(data.message);
+      }
+      
+      const config = modelConfigs[model as keyof typeof modelConfigs] || modelConfigs["Random Forest"];
+      
+      setApiResult({
+        signal: data.signal || "HOLD",
+        confidence: data.confidence ? Math.round(data.confidence * 100) : 50,
+        features: config.features,
+        description: config.description,
+        metrics: config.metrics
+      });
+      
       setResultKey((k) => k + 1);
       setGenerated(true);
+    } catch (error) {
+      console.error(error);
+      alert("Error generating signal from backend: " + error);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -221,7 +210,7 @@ export default function SignalEngine() {
         />
       )}
 
-      {result && !loading && (
+      {apiResult && !loading && (
         <>
           {/* Model Info Banner */}
           <motion.div
@@ -233,7 +222,7 @@ export default function SignalEngine() {
             <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-foreground">{model}</span>
-              <p className="text-sm text-muted-foreground mt-0.5">{result.description}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{apiResult.description}</p>
             </div>
           </motion.div>
 
@@ -247,32 +236,32 @@ export default function SignalEngine() {
             >
               <span className="text-sm text-muted-foreground mb-3">Signal for {symbol}</span>
               <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center mb-4 ${
-                result.signal === "BUY" ? "bg-gain/10 text-gain" : 
-                result.signal === "SELL" ? "bg-loss/10 text-loss" : 
+                apiResult.signal === "BUY" ? "bg-gain/10 text-gain" : 
+                apiResult.signal === "SELL" ? "bg-loss/10 text-loss" : 
                 "bg-warning/10 text-warning"
               }`}>
-                {result.signal === "BUY" ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : 
-                 result.signal === "SELL" ? <TrendingDown className="w-8 h-8 md:w-10 md:h-10" /> : 
+                {apiResult.signal === "BUY" ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : 
+                 apiResult.signal === "SELL" ? <TrendingDown className="w-8 h-8 md:w-10 md:h-10" /> : 
                  <Minus className="w-8 h-8 md:w-10 md:h-10" />}
               </div>
               <span className={`text-2xl md:text-3xl font-bold ${
-                result.signal === "BUY" ? "text-gain" : 
-                result.signal === "SELL" ? "text-loss" : 
+                apiResult.signal === "BUY" ? "text-gain" : 
+                apiResult.signal === "SELL" ? "text-loss" : 
                 "text-warning"
-              }`}>{result.signal}</span>
+              }`}>{apiResult.signal}</span>
               <div className="mt-4 flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Confidence:</span>
-                <span className="text-lg font-bold text-foreground">{result.confidence}%</span>
+                <span className="text-lg font-bold text-foreground">{apiResult.confidence}%</span>
               </div>
               <div className="w-32 h-2 rounded-full bg-secondary mt-2 overflow-hidden">
                 <motion.div
                   key={`conf-${resultKey}`}
                   initial={{ width: 0 }}
-                  animate={{ width: `${result.confidence}%` }}
+                  animate={{ width: `${apiResult.confidence}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
                   className={`h-full rounded-full ${
-                    result.signal === "BUY" ? "bg-gain" : 
-                    result.signal === "SELL" ? "bg-loss" : 
+                    apiResult.signal === "BUY" ? "bg-gain" : 
+                    apiResult.signal === "SELL" ? "bg-loss" : 
                     "bg-warning"
                   }`}
                 />
@@ -283,7 +272,7 @@ export default function SignalEngine() {
                 <div className="border-t border-border pt-4">
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">Model Parameters</span>
                   <div className="grid grid-cols-3 gap-2 mt-2">
-                    {result.metrics.map((m) => (
+                    {apiResult.metrics.map((m: any) => (
                       <div key={m.label} className="text-center">
                         <div className="text-xs text-muted-foreground">{m.label}</div>
                         <div className="font-mono text-sm text-foreground">{m.value}</div>
@@ -304,7 +293,7 @@ export default function SignalEngine() {
             >
               <h3 className="section-title text-foreground mb-4">Feature Importance — {model}</h3>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={result.features} layout="vertical">
+                <BarChart data={apiResult.features} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 20%, 18%)" />
                   <XAxis type="number" stroke="hsl(215, 15%, 55%)" fontSize={12} domain={[0, 0.3]} />
                   <YAxis dataKey="feature" type="category" stroke="hsl(215, 15%, 55%)" fontSize={11} width={110} />
@@ -314,7 +303,7 @@ export default function SignalEngine() {
                   />
                   <Bar
                     dataKey="importance"
-                    fill={result.signal === "BUY" ? "hsl(160, 84%, 39%)" : result.signal === "SELL" ? "hsl(0, 72%, 51%)" : "hsl(38, 92%, 50%)"}
+                    fill={apiResult.signal === "BUY" ? "hsl(160, 84%, 39%)" : apiResult.signal === "SELL" ? "hsl(0, 72%, 51%)" : "hsl(38, 92%, 50%)"}
                     radius={[0, 4, 4, 0]}
                   />
                 </BarChart>
