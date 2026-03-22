@@ -1,12 +1,49 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Zap, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  const navigate = useNavigate();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok || data.status === "error") {
+        throw new Error(data.message || "Login failed");
+      }
+      
+      // Store session
+      localStorage.setItem("userToken", data.token);
+      localStorage.setItem("userEmail", data.email);
+      localStorage.setItem("userName", data.name);
+      
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
@@ -24,20 +61,22 @@ export default function LoginPage() {
         <h2 className="text-2xl font-bold text-foreground text-center mb-2">Welcome back</h2>
         <p className="text-muted-foreground text-center mb-8">Sign in to your account</p>
 
-        <div className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
+          {error && <div className="p-3 bg-loss/10 border border-loss text-loss rounded-md text-sm">{error}</div>}
+
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="john@example.com" className="pl-9 bg-secondary border-border text-foreground" />
+              <Input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" className="pl-9 bg-secondary border-border text-foreground" />
             </div>
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-9 pr-10 bg-secondary border-border text-foreground" />
-              <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <Input required type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="pl-9 pr-10 bg-secondary border-border text-foreground" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -45,10 +84,11 @@ export default function LoginPage() {
           <div className="flex justify-end">
             <Link to="/forgot-password" className="text-sm text-primary hover:underline">Forgot password?</Link>
           </div>
-          <Link to="/dashboard">
-            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11">Sign In</Button>
-          </Link>
-        </div>
+          
+          <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11">
+            {loading ? <Loader2 className="animate-spin w-4 h-4" /> : "Sign In"}
+          </Button>
+        </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Don't have an account? <Link to="/register" className="text-primary hover:underline">Sign up</Link>

@@ -7,3 +7,7 @@ xgboost
 lxml
 html5lib
 flask-cors
+pymongo
+bcrypt
+PyJWT
+python-dotenv

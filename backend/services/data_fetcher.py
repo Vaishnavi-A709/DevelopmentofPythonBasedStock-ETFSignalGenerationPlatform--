@@ -11,6 +11,17 @@ def fetch_stock_data(ticker, period="6mo"):
         ticker_obj = yf.Ticker(ticker)
         data = ticker_obj.history(period=period)
 
+        # Smart fallback: If user entered an Indian stock without a suffix, try appending .NS then .BO
+        if data.empty and '.' not in ticker:
+            ns_ticker = f"{ticker}.NS"
+            data = yf.Ticker(ns_ticker).history(period=period)
+            if data.empty:
+                bo_ticker = f"{ticker}.BO"
+                data = yf.Ticker(bo_ticker).history(period=period)
+            if not data.empty:
+                # Update ticker to the working suffixed version for further fallbacks
+                ticker = ns_ticker if not data.empty else bo_ticker
+
         if data.empty:
             # Fallback to the BSE (Bombay Stock Exchange) if NSE (.NS) fails due to Yahoo Finance glitches
             if ticker.endswith('.NS'):

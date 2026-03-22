@@ -30,6 +30,10 @@ export default function TopNavbar({ onMenuToggle }: TopNavbarProps) {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
+  const userName = localStorage.getItem("userName") || "User";
+  const userEmail = localStorage.getItem("userEmail") || "";
+  const userInitials = userName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+
   const handleLogout = () => {
     toast.success("Logged out successfully");
     navigate("/login");
@@ -98,14 +102,14 @@ export default function TopNavbar({ onMenuToggle }: TopNavbarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">JD</AvatarFallback>
+                <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">{userInitials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel className="font-normal">
-              <p className="text-sm font-medium text-foreground">John Doe</p>
-              <p className="text-xs text-muted-foreground">john@example.com</p>
+              <p className="text-sm font-medium text-foreground">{userName}</p>
+              <p className="text-xs text-muted-foreground">{userEmail}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
