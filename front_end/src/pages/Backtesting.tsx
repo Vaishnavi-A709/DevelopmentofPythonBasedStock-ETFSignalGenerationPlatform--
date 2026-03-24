@@ -5,7 +5,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockBacktestResults, mockEquityCurve } from "@/lib/mockData";
 import { StatCardSkeleton, ChartSkeleton } from "@/components/ui/PageSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -14,24 +13,47 @@ const strategies = ["Moving Average Crossover", "RSI Mean Reversion", "MACD Mome
 export default function Backtesting() {
   const [ran, setRan] = useState(false);
   const [loading, setLoading] = useState(false);
-  const r = mockBacktestResults;
+  const [results, setResults] = useState<any>(null);
 
-  const handleRun = () => {
+  // Form states
+  const [strategy, setStrategy] = useState(strategies[0]);
+  const [startDate, setStartDate] = useState("2020-01-01");
+  const [endDate, setEndDate] = useState("2024-01-01");
+  const [initialCapital, setInitialCapital] = useState("100000");
+
+  const handleRun = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setRan(true);
+    setRan(false);
+    try {
+      const payload = { strategy, startDate, endDate, initialCapital: Number(initialCapital) };
+      const response = await fetch("http://127.0.0.1:5000/api/backtest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!data.error) {
+        setResults(data);
+        setRan(true);
+      } else {
+        alert(data.error);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to run backtest. Make sure the backend terminal is running!");
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
-  const metrics = [
-    { label: "Sharpe Ratio", value: r.sharpeRatio.toFixed(2), good: r.sharpeRatio > 1 },
-    { label: "Max Drawdown", value: `${r.maxDrawdown}%`, good: false },
-    { label: "Win Rate", value: `${r.winRate}%`, good: r.winRate > 50 },
-    { label: "CAGR", value: `${r.cagr}%`, good: true },
-    { label: "Total Trades", value: r.totalTrades.toString(), good: true },
-    { label: "Profit Factor", value: r.profitFactor.toFixed(1), good: r.profitFactor > 1 },
-  ];
+  const metrics = results ? [
+    { label: "Sharpe Ratio", value: results.sharpeRatio.toFixed(2), good: results.sharpeRatio > 1 },
+    { label: "Max Drawdown", value: `${results.maxDrawdown}%`, good: false },
+    { label: "Win Rate", value: `${results.winRate}%`, good: results.winRate > 50 },
+    { label: "CAGR", value: `${results.cagr}%`, good: true },
+    { label: "Total Trades", value: results.totalTrades.toString(), good: true },
+    { label: "Profit Factor", value: results.profitFactor.toFixed(1), good: results.profitFactor > 1 },
+  ] : [];
 
   return (
     <div className="space-y-6">
@@ -44,7 +66,7 @@ export default function Backtesting() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 items-end">
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">Strategy</label>
-            <Select defaultValue={strategies[0]}>
+            <Select value={strategy} onValueChange={setStrategy}>
               <SelectTrigger className="bg-secondary border-border text-foreground">
                 <SelectValue />
               </SelectTrigger>
@@ -55,15 +77,15 @@ export default function Backtesting() {
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">Start Date</label>
-            <Input type="date" defaultValue="2024-01-01" className="bg-secondary border-border text-foreground" />
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-secondary border-border text-foreground" />
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">End Date</label>
-            <Input type="date" defaultValue="2024-12-31" className="bg-secondary border-border text-foreground" />
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-secondary border-border text-foreground" />
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">Initial Capital</label>
-            <Input type="number" defaultValue="100000" className="bg-secondary border-border text-foreground font-mono" />
+            <Input type="number" value={initialCapital} onChange={(e) => setInitialCapital(e.target.value)} className="bg-secondary border-border text-foreground font-mono" />
           </div>
           <Button onClick={handleRun} disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10">
             {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
@@ -87,7 +109,7 @@ export default function Backtesting() {
         />
       )}
 
-      {ran && !loading && (
+      {ran && !loading && results && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
             {metrics.map((m, i) => (
@@ -101,10 +123,10 @@ export default function Backtesting() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card">
             <h3 className="section-title text-foreground mb-4">Performance Chart</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockEquityCurve}>
+                <LineChart data={results.equityCurve}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 20%, 18%)" />
                 <XAxis dataKey="date" stroke="hsl(215, 15%, 55%)" fontSize={12} />
-                <YAxis stroke="hsl(215, 15%, 55%)" fontSize={12} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <YAxis stroke="hsl(215, 15%, 55%)" fontSize={12} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                 <Tooltip contentStyle={{ background: "hsl(222, 41%, 10%)", border: "1px solid hsl(222, 20%, 18%)", borderRadius: 8, color: "hsl(210, 20%, 93%)" }} />
                 <Line type="monotone" dataKey="value" stroke="hsl(160, 84%, 39%)" strokeWidth={2} dot={false} name="Strategy" />
                 <Line type="monotone" dataKey="benchmark" stroke="hsl(215, 15%, 55%)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Benchmark" />
@@ -128,14 +150,14 @@ export default function Backtesting() {
                   </tr>
                 </thead>
                 <tbody>
-                  {r.trades.map((t) => (
+                  {results.trades.map((t: any) => (
                     <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                       <td className="py-3 text-muted-foreground">{t.date}</td>
                       <td className="py-3 font-mono font-semibold text-foreground">{t.symbol}</td>
                       <td className="py-3"><span className={`signal-badge-${t.type === "LONG" ? "buy" : "sell"}`}>{t.type}</span></td>
-                      <td className="py-3 font-mono text-foreground">${t.entry.toFixed(2)}</td>
-                      <td className="py-3 font-mono text-foreground">${t.exit.toFixed(2)}</td>
-                      <td className={`py-3 font-mono ${t.pnl >= 0 ? "text-gain" : "text-loss"}`}>{t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}</td>
+                      <td className="py-3 font-mono text-foreground">₹{t.entry.toFixed(2)}</td>
+                      <td className="py-3 font-mono text-foreground">₹{t.exit.toFixed(2)}</td>
+                      <td className={`py-3 font-mono ${t.pnl >= 0 ? "text-gain" : "text-loss"}`}>{t.pnl >= 0 ? "+" : ""}₹{t.pnl.toFixed(2)}</td>
                       <td className={`py-3 font-mono ${t.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>{t.pnlPercent >= 0 ? "+" : ""}{t.pnlPercent.toFixed(2)}%</td>
                     </tr>
                   ))}

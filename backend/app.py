@@ -10,9 +10,13 @@ CORS(app)
 
 from routes.auth import auth_bp
 from routes.alerts import alerts_bp
+from routes.backtest import backtest_bp
+from routes.portfolio import portfolio_bp
 
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(alerts_bp, url_prefix='/api/alerts')
+app.register_blueprint(backtest_bp, url_prefix='/api/backtest')
+app.register_blueprint(portfolio_bp, url_prefix='/api/portfolio')
 
 # ---------------------------------
 # Load Models at Startup
