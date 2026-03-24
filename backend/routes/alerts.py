@@ -5,7 +5,12 @@ from datetime import datetime
 
 alerts_bp = Blueprint("alerts", __name__)
 
-@alerts_bp.route("/<email>", methods=["GET"])
+from services.user_service import get_user_data
+
+@app.route('/settings', methods=['GET'])
+def get_settings():
+    user = get_user_data()
+    return user
 def get_alerts(email):
     try:
         alerts = []
