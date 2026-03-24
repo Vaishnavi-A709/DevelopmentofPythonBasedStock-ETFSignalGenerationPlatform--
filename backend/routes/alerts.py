@@ -3,7 +3,7 @@ from database import alerts_collection
 from bson.objectid import ObjectId
 from datetime import datetime
 
-alerts_bp = Blueprint("alerts", __name__)
+@alerts_bp.route('/settings', methods=['GET'])
 
 from services.user_service import get_user_data
 
