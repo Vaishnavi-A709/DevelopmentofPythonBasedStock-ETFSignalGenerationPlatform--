@@ -19,6 +19,26 @@ def predict_signal(ticker, models_dict):
 
     # Grab the current market price before feature engineering removes rows/columns
     current_price = data['Close'].iloc[-1]
+    
+    # Convert price to INR if it is in another currency like USD
+    try:
+        import yfinance as yf
+        info = yf.Ticker(ticker).info
+        currency = info.get('currency', 'USD')
+        
+        if currency and currency != 'INR':
+            rate_ticker = f"{currency}INR=X"
+            rate_data = yf.Ticker(rate_ticker).history(period="1d")
+            if not rate_data.empty:
+                exchange_rate = rate_data['Close'].iloc[-1]
+                current_price = current_price * exchange_rate
+            else:
+                current_price = current_price * 83.5 # Fallback static rate
+    except Exception as e:
+        print(f"Currency conversion failed: {e}")
+        # Simple heuristic fallback
+        if current_price < 1000 and '.' not in ticker: 
+            current_price = current_price * 83.5
 
     # 2. Create features
     df = create_features(data)

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Search, TrendingUp, TrendingDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockMarketData, mockTopGainers, mockTopLosers } from "@/lib/mockData";
+// Mocks removed in favor of live data
 import { StatCardSkeleton, TableSkeleton } from "@/components/ui/PageSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -13,13 +13,36 @@ export default function MarketDataPage() {
   const [search, setSearch] = useState("");
   const [sector, setSector] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [marketData, setMarketData] = useState<any[]>([]);
+  const [topGainers, setTopGainers] = useState<any[]>([]);
+  const [topLosers, setTopLosers] = useState<any[]>([]);
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(t);
+    const fetchMarketData = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/api/market/overview");
+        const json = await res.json();
+        
+        if (json.data) {
+          setMarketData(json.data);
+          
+          const sorted = [...json.data].sort((a, b) => b.change - a.change);
+          setTopGainers(sorted.slice(0, 3));
+          
+          const sortedLosers = [...json.data].sort((a, b) => a.change - b.change);
+          setTopLosers(sortedLosers.slice(0, 3));
+        }
+      } catch (err) {
+        console.error("Error fetching market data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchMarketData();
   }, []);
 
-  const filtered = mockMarketData.filter((s) => {
+  const filtered = marketData.filter((s) => {
     const matchSearch = s.symbol.toLowerCase().includes(search.toLowerCase()) || s.name.toLowerCase().includes(search.toLowerCase());
     const matchSector = sector === "All" || s.sector === sector;
     return matchSearch && matchSector;
@@ -52,14 +75,14 @@ export default function MarketDataPage() {
             <TrendingUp className="w-5 h-5 text-gain" /> Top Gainers
           </h3>
           <div className="space-y-3">
-            {mockTopGainers.map((s) => (
+            {topGainers.map((s) => (
               <div key={s.symbol} className="flex items-center justify-between p-3 rounded-lg bg-gain/5 border border-gain/10">
                 <div>
                   <span className="font-mono font-semibold text-foreground">{s.symbol}</span>
                   <span className="text-muted-foreground text-sm ml-2 hidden sm:inline">{s.name}</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono text-foreground text-sm">${s.price.toFixed(2)}</div>
+                  <div className="font-mono text-foreground text-sm">₹{s.price.toFixed(2)}</div>
                   <div className="text-gain text-sm font-mono">+{s.change.toFixed(2)}%</div>
                 </div>
               </div>
@@ -72,14 +95,14 @@ export default function MarketDataPage() {
             <TrendingDown className="w-5 h-5 text-loss" /> Top Losers
           </h3>
           <div className="space-y-3">
-            {mockTopLosers.map((s) => (
+            {topLosers.map((s) => (
               <div key={s.symbol} className="flex items-center justify-between p-3 rounded-lg bg-loss/5 border border-loss/10">
                 <div>
                   <span className="font-mono font-semibold text-foreground">{s.symbol}</span>
                   <span className="text-muted-foreground text-sm ml-2 hidden sm:inline">{s.name}</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono text-foreground text-sm">${s.price.toFixed(2)}</div>
+                  <div className="font-mono text-foreground text-sm">₹{s.price.toFixed(2)}</div>
                   <div className="text-loss text-sm font-mono">{s.change.toFixed(2)}%</div>
                 </div>
               </div>
@@ -130,7 +153,7 @@ export default function MarketDataPage() {
                   <tr key={s.symbol} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                     <td className="py-3 font-mono font-semibold text-foreground">{s.symbol}</td>
                     <td className="py-3 text-muted-foreground">{s.name}</td>
-                    <td className="py-3 font-mono text-foreground">${s.price.toFixed(2)}</td>
+                    <td className="py-3 font-mono text-foreground">₹{s.price.toFixed(2)}</td>
                     <td className={`py-3 font-mono ${s.change >= 0 ? "text-gain" : "text-loss"}`}>{s.change >= 0 ? "+" : ""}{s.change.toFixed(2)}%</td>
                     <td className="py-3 text-muted-foreground">{s.volume}</td>
                     <td className="py-3 text-muted-foreground">{s.marketCap}</td>

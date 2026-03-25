@@ -61,7 +61,7 @@ export default function MarketTicker() {
             </span>
 
             <span className="text-muted-foreground">
-              ${t.price.toFixed(2)}
+              ₹{t.price.toFixed(2)}
             </span>
 
             <span className={t.change >= 0 ? "text-gain" : "text-loss"}>

@@ -113,7 +113,9 @@ export default function SignalEngine() {
     setLoading(true);
     setGenerated(false);
     try {
-      const response = await fetch(`http://127.0.0.1:5000/predict/${symbol}`);
+      const userEmail = localStorage.getItem("userEmail") || "";
+      const emailQuery = userEmail ? `?email=${userEmail}` : "";
+      const response = await fetch(`http://127.0.0.1:5000/predict/${symbol}${emailQuery}`);
       if (!response.ok) {
         throw new Error("Failed to fetch prediction");
       }

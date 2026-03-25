@@ -104,7 +104,7 @@ export default function PortfolioAnalytics() {
             <Input type="number" value={shares} onChange={(e) => setShares(e.target.value)} placeholder="10" className="bg-secondary" />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">Buy Price ($ / ₹)</label>
+            <label className="text-xs text-muted-foreground block mb-1">Buy Price (₹)</label>
             <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="2500" className="bg-secondary" />
           </div>
           <Button onClick={handleAddPosition} className="bg-gain hover:bg-gain/90 text-white">Confirm Data</Button>
