@@ -122,5 +122,5 @@ For full route definitions, see the route files under [backend/routes](backend/r
 
 This project is a demo/proof-of-concept. See the repository license file: [license.txt](license.txt).
 
-If you prefer a different license (MIT, Apache-2.0, etc.) tell me and I can add a standard `LICENSE` file.
+If you prefer a different license (MIT, Apache-2.0, etc.) 
 
