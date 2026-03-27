@@ -1,126 +1,201 @@
-# Development of Python-Based Stock & ETF Signal Generation Platform
+# SignalAI — Stock & ETF Signal Generation Platform
 
-This repository contains a full-stack proof-of-concept platform for generating trading signals for stocks and ETFs using a global XGBoost model, a Flask backend, and a React + Vite frontend.
+> A full-stack platform that uses a global XGBoost model to generate BUY / HOLD / SELL signals for Indian stocks and ETFs. Built with Flask, React (Vite + TypeScript), and MongoDB.
 
-**Key ideas:** use a single, unified model trained across many tickers to produce BUY / HOLD / SELL signals, provide REST APIs for predictions, alerts, backtesting and a modern SPA dashboard.
+---
 
-**Contents:**
+## Overview
 
-- **backend/**: Flask API, services (data fetching, feature engineering, prediction), model training and saved models.
-- **front_end/**: Vite + React (TypeScript) single-page app for UI and dashboards.
+SignalAI trains a single unified ML model across hundreds of tickers (Nifty 500 + core stocks) and exposes predictions through a REST API. A React SPA provides dashboards for signals, backtesting, portfolio analytics, alerts, and live market data.
 
-**Requirements summary:**
+**Tech stack:**
 
-- Python 3.10+ for backend
-- Node 18+ / npm or pnpm for frontend
-- MongoDB for persistence (or a local MongoDB instance for development)
+| Layer | Technology |
+|---|---|
+| ML / Backend | Python 3.10+, XGBoost, scikit-learn, yfinance, Flask |
+| Database | MongoDB |
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS |
+| Auth | JWT |
 
-**Quick links:**
+---
 
-- Backend entry: [backend/app.py](backend/app.py)
-- Model training: [backend/train_global_model.py](backend/train_global_model.py)
-- Frontend app: [front_end/src/App.tsx](front_end/src/App.tsx)
-- Saved models: [backend/models](backend/models) (contains pre-saved global_model.pkl, global_scaler.pkl, global_features.pkl)
+## Project Structure
 
-**Features**
+```
+├── backend/
+│   ├── app.py                    # Flask entry point
+│   ├── train_global_model.py     # Model training script
+│   ├── requirements.txt
+│   ├── models/                   # Saved model artifacts
+│   │   ├── global_model.pkl
+│   │   ├── global_scaler.pkl
+│   │   └── global_features.pkl
+│   ├── routes/                   # Flask route blueprints
+│   ├── services/
+│   │   ├── data_fetcher.py       # yfinance fetching with .NS/.BO fallbacks
+│   │   └── ...
+│   └── database.py               # MongoDB connection & collections
+│
+└── front_end/
+    ├── src/
+    │   ├── App.tsx
+    │   └── pages/                # Dashboard, SignalEngine, Backtesting, etc.
+    └── package.json
+```
 
-- REST API endpoints for: authentication, user profile, market overview, prediction (/predict/<ticker>), backtesting, alerts and notifications.
-- Background alert-checker thread that monitors active alerts and saves notifications.
-- Model training script that downloads historical data, computes features, trains an XGBoost classifier, and saves model artifacts.
-- Frontend SPA with pages for dashboard, signals, backtesting, alerts, market overview and account settings.
+---
+
+## Prerequisites
+
+- Python 3.10+
+- Node.js 18+ and npm
+- MongoDB (local instance or Atlas URI)
+
+---
 
 ## Setup & Run
 
-**1) Backend (Python)**
-
-- Install dependencies:
-  - Create a virtual environment and activate it
-
-  - Install requirements from [backend/requirements.txt](backend/requirements.txt)
-
-  ```bash
-  python -m venv .venv
-  # Windows
-  .venv\Scripts\activate
-  # macOS / Linux
-  source .venv/bin/activate
-  pip install -r backend/requirements.txt
-  ```
-
-- Environment variables:
-  - Create a `.env` file or export variables used by [backend/database.py](backend/database.py):
-    - `MONGO_URI` — MongoDB connection string (if not set, code falls back to mongodb://localhost:27017/).
-    - `JWT_SECRET` — optional secret for JWT tokens (default is provided in code).
-
-- Run backend server (from repo root):
+### 1. Backend
 
 ```bash
-# from repo root
-python backend/app.py
+# Create and activate a virtual environment
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r backend/requirements.txt
 ```
 
-This starts the Flask server at http://127.0.0.1:5000 by default.
+Create a `.env` file in the repo root (optional — defaults are provided):
 
-**2) Frontend (Vite + React)**
+```env
+MONGO_URI=mongodb://localhost:27017/    # MongoDB connection string
+JWT_SECRET=your_secret_here            # JWT signing secret
+```
 
-- Install and start frontend:
+Start the Flask server:
+
+```bash
+python backend/app.py
+# Runs at http://127.0.0.1:5000
+```
+
+### 2. Frontend
 
 ```bash
 cd front_end
 npm install
 npm run dev
+# Runs at http://localhost:5173 (or as printed by Vite)
 ```
 
-Open the dev site (Vite will print the local URL, typically http://localhost:5173).
+---
 
-## Model training & artifacts
+## Model Training
 
-- Pretrained model artifacts (if present) are stored in [backend/models](backend/models): `global_model.pkl`, `global_scaler.pkl`, `global_features.pkl`.
-- To retrain the global model from scratch, run the trainer:
+Pre-trained artifacts are included in `backend/models/`. To retrain from scratch:
 
 ```bash
 python backend/train_global_model.py
 ```
 
-Notes: training will download historical data for many tickers (can take significant time and API rate-limit protection may be needed). The trainer uses the same feature engineering used at inference.
+This downloads historical data for Nifty 500 + core tickers, engineers features, trains a global XGBoost classifier, and saves three artifacts:
 
-## API Overview (selected endpoints)
+| File | Description |
+|---|---|
+| `global_model.pkl` | Trained XGBoost classifier |
+| `global_scaler.pkl` | Feature scaler |
+| `global_features.pkl` | Feature column names |
 
-- Root: GET `/` — basic health and available endpoints ([backend/app.py](backend/app.py)).
-- Stocks list: GET `/stocks` — returns list of tickers available (Nifty 500 + core tickers).
-- Predict: GET `/predict/<ticker>?email=<email>` — returns signal, confidence, latest_price and optionally stores a recent search under the provided email.
-- Market overview: GET `/api/market/overview` — returns core Indian tickers info (price, change, market cap).
-- Backtest: POST `/api/backtest` — run a simple SMA crossover backtest; request body expects `startDate`, `endDate`, `initialCapital`.
-- Alerts: CRUD endpoints under `/api/alerts` to create, list and remove user alerts; background checker posts notifications to DB.
-- Auth: `/api/auth/register` and `/api/auth/login` to create accounts and obtain JWT tokens.
+> **Note:** Training downloads data for many tickers and can take significant time. Rate-limit protection for yfinance is built in.
 
-For full route definitions, see the route files under [backend/routes](backend/routes).
+Labels are generated from next-day return thresholds:
+- **BUY** — return above upper threshold
+- **HOLD** — return within neutral band
+- **SELL** — return below lower threshold
 
-## Development notes & assumptions
+---
 
-- The backend uses `yfinance` for data. In production you may prefer a paid data provider or caching proxy to avoid rate-limits.
-- The training uses a multi-ticker aggregated dataset; labels are next-day return thresholds (BUY/HOLD/SELL).
-- The alert checker runs in a daemon thread every 30 seconds; this is suitable for demos but a production system should use a scheduler or serverless events.
-- MongoDB is used for users, alerts and notifications. Collections are defined in [backend/database.py](backend/database.py).
+## API Reference
 
-## Tests
+Base URL: `http://127.0.0.1:5000`
 
-- There are several small test scripts at the repo root and under `backend/` (e.g., `test_fetch.py`, `test_predictor.py`). These are ad-hoc scripts — run them individually with the appropriate environment.
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Health check & available endpoints |
+| GET | `/stocks` | List of available tickers (Nifty 500 + core) |
+| GET | `/predict/<ticker>?email=<email>` | BUY/HOLD/SELL signal + confidence + latest price |
+| GET | `/api/market/overview` | Price, change %, market cap for core Indian tickers |
+| POST | `/api/backtest` | Run RSI strategy backtest (see body below) |
+| POST | `/api/alerts` | Create a price alert |
+| GET | `/api/alerts?email=<email>` | List user's active alerts |
+| DELETE | `/api/alerts/<id>` | Remove an alert |
+| POST | `/api/auth/register` | Register a new user |
+| POST | `/api/auth/login` | Login and receive a JWT token |
+| POST | `/api/user` | Update user profile (name) |
+
+### Backtest request body
+
+```json
+{
+  "startDate": "2020-01-01",
+  "endDate":   "2024-01-01",
+  "initialCapital": 100000
+}
+```
+
+The backend runs an RSI Mean Reversion strategy against the requested date range using yfinance data.
+
+---
+
+## Features
+
+- **ML Signal Engine** — enter any NSE ticker and receive a BUY / HOLD / SELL signal with confidence score, powered by the global XGBoost model.
+- **Backtesting** — test the RSI strategy against historical data over any date range with performance metrics (Sharpe ratio, max drawdown, win rate, CAGR).
+- **Portfolio Analytics** — overview of positions and P&L.
+- **Alerts** — set price-level alerts; a background daemon thread checks conditions every 30 seconds and writes notifications to MongoDB.
+- **Market Data** — live table of Nifty large-cap stocks with price, change %, volume, market cap, P/E, and sector.
+- **Authentication** — register / login with JWT; user profile stored in MongoDB.
+
+---
+
+## Data Source
+
+All market data is fetched via **yfinance** (Yahoo Finance). No API key is required. The fetcher automatically appends `.NS` or `.BO` suffixes for Indian tickers and falls back to `yf.download` if the primary method fails.
+
+> In production, consider a paid data provider or a caching proxy to avoid Yahoo Finance rate limits.
+
+---
 
 ## Troubleshooting
 
-- If model artifacts are missing, the backend will warn and prediction endpoints will error — run the trainer first or place model files in [backend/models](backend/models).
-- If Yahoo Finance fails to fetch a ticker, the code attempts several fallbacks (append `.NS` / `.BO` or use `yf.download`). See [backend/services/data_fetcher.py](backend/services/data_fetcher.py).
+**"Model artifacts missing" error on `/predict`**
+Run `python backend/train_global_model.py` to generate the model files, or place existing `global_model.pkl`, `global_scaler.pkl`, `global_features.pkl` in `backend/models/`.
 
-## Next steps / suggestions
+**Stock data not loading**
+Yahoo Finance occasionally rate-limits or drops tickers. The fetcher retries with `.NS` / `.BO` suffixes automatically. For persistent failures, try again after a short wait.
 
-- Add Dockerfiles for reproducible local development for backend and frontend.
-- Add CI (tests + lint) and a workflow to build frontend production assets.
-- Add rate-limit / retry policies for `yfinance` calls and consider caching expensive responses.
+**MongoDB connection refused**
+Ensure MongoDB is running locally (`mongod`) or set `MONGO_URI` in your `.env` to a valid Atlas connection string.
 
-## License & Credits
+**Frontend can't reach backend**
+Both servers must be running simultaneously. The frontend calls `http://127.0.0.1:5000` directly — check that the Flask server started without errors.
 
-This project is a demo/proof-of-concept. See the repository license file: [license.txt](license.txt).
+---
 
-If you prefer a different license (MIT, Apache-2.0, etc.) 
+## Development Notes
 
+- The alert checker runs as a **daemon thread** every 30 seconds. Suitable for demos; replace with a proper scheduler (Celery, APScheduler, or serverless cron) for production.
+- The global model is trained on **multi-ticker aggregated data** — it generalises across tickers rather than overfitting to a single one.
+- MongoDB collections: `users`, `alerts`, `notifications`. Defined in `backend/database.py`.
+- Ad-hoc test scripts are available at the repo root and under `backend/` (e.g. `test_fetch.py`, `test_predictor.py`) — run individually with the venv active.
+
+---
+
+## License
+
+This project is a demo / proof-of-concept. See [license.txt](license.txt).
