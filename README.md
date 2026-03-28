@@ -6,7 +6,9 @@
 
 ## Overview
 
-SignalAI trains a single unified ML model across hundreds of tickers (Nifty 500 + core stocks) and exposes predictions through a REST API. A React SPA provides dashboards for signals, backtesting, portfolio analytics, alerts, and live market data.
+SignalAI trains a single unified ML model across hundreds of tickers (Nifty 500 + core stocks) and exposes predictions through a REST API. A React SPA provides dashboards for signals, backtesting, portfolio analytics, alerts, and live market data.\
+
+https://developmentof-python-based-stock-et.vercel.app/
 
 **Tech stack:**
 
