@@ -201,3 +201,9 @@ Both servers must be running simultaneously. The frontend calls `http://127.0.0.
 ## License
 
 This project is a demo / proof-of-concept. See [license.txt](license.txt).
+
+
+## 📊 Sprint & Project Tracking
+
+[Agile_Template_v0.1 (2).xlsx](https://github.com/user-attachments/files/26403801/Agile_Template_v0.1.2.xlsx)
+
