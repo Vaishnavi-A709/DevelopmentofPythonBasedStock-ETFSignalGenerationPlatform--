@@ -173,37 +173,12 @@ All market data is fetched via **yfinance** (Yahoo Finance). No API key is requi
 
 ---
 
-## Troubleshooting
 
-**"Model artifacts missing" error on `/predict`**
-Run `python backend/train_global_model.py` to generate the model files, or place existing `global_model.pkl`, `global_scaler.pkl`, `global_features.pkl` in `backend/models/`.
-
-**Stock data not loading**
-Yahoo Finance occasionally rate-limits or drops tickers. The fetcher retries with `.NS` / `.BO` suffixes automatically. For persistent failures, try again after a short wait.
-
-**MongoDB connection refused**
-Ensure MongoDB is running locally (`mongod`) or set `MONGO_URI` in your `.env` to a valid Atlas connection string.
-
-**Frontend can't reach backend**
-Both servers must be running simultaneously. The frontend calls `http://127.0.0.1:5000` directly — check that the Flask server started without errors.
-
----
-
-## Development Notes
-
-- The alert checker runs as a **daemon thread** every 30 seconds. Suitable for demos; replace with a proper scheduler (Celery, APScheduler, or serverless cron) for production.
-- The global model is trained on **multi-ticker aggregated data** — it generalises across tickers rather than overfitting to a single one.
-- MongoDB collections: `users`, `alerts`, `notifications`. Defined in `backend/database.py`.
-- Ad-hoc test scripts are available at the repo root and under `backend/` (e.g. `test_fetch.py`, `test_predictor.py`) — run individually with the venv active.
-
----
 
 ## License
 
 This project is a demo / proof-of-concept. See [license.txt](license.txt).
 
 
-## 📊 Sprint & Project Tracking
 
-[Agile_Template_v0.1 (2).xlsx](https://github.com/user-attachments/files/26403801/Agile_Template_v0.1.2.xlsx)
 
